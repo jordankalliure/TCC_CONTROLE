@@ -260,11 +260,11 @@ void sm_control()
 {
   Ic_buck = IL_buck - Vc_buck/Rcarga; 
   u[0] = ((Vc_buck/Rcarga)/(Vc_buck*1))*(e[0]) - Ic_buck;
-  if (u[0]>1.0)
+  if (u[0]>0.2)
   {
     u[0] = 1.0;
     }
-  else if (u[0]<0.0)
+  else if (u[0]<-0.2)
   {
     u[0] = 0.0;
   }
