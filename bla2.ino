@@ -4,6 +4,7 @@ volatile double Vc_boost = 0.0000, Ic_boost= 0.0000, Ir_boost= 0.0000, Vs_boost=
 volatile double u[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00}; //error and control signal
 volatile double e[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00}; //error and control signal
 volatile double vref = 6.00;
+volatile double reade[8] = {0,0,0,32,0,0,0,10};
 volatile double control_dut = 0.00;
 volatile int Vy = 0,Iy = 0; //duty cycle variable
 volatile int Rcarga = 0, leitura = 0, malha = 0, control = 0, cpl = 0; //Control flags 
@@ -88,7 +89,7 @@ void pwm_start()
 
   PWM->PWM_CH_NUM[2].PWM_CPRD = 100;                             // Channel 2 : Set the PWM frequency 2MHz/(2 * CPRD) = F ;
 
-  PWM->PWM_CH_NUM[2].PWM_CDTY = 50;                             // Channel 2: Set the PWM duty cycle to x%= (CDTY/ CPRD)  * 100 % ;
+  PWM->PWM_CH_NUM[2].PWM_CDTY = 100;                             // Channel 2: Set the PWM duty cycle to x%= (CDTY/ CPRD)  * 100 % ;
 
   PWM->PWM_ENA = PWM_ENA_CHID2;
   
@@ -96,8 +97,9 @@ void pwm_start()
   /*PWM NEED TO START TO CPL IN RAMP INPUT*/
 }
 void TC3_Handler(){
-    /*Function where the input were received and insert in variable*/
-    TC_GetStatus(TC1, 0);
+
+    tratar_interrupcao(); 
+    
     /*startTimer(TC1,0,TC3_IRQn,2625); /*function to start the timer counter and to call TC3_Handler to read input register*/
     while((ADC->ADC_ISR & ADC_CHER_CH11) == 0);
     /*BUCK converter
@@ -114,9 +116,10 @@ void TC3_Handler(){
       Ic_boost = ADC->ADC_LCDR[6];
 *      Ir_boost = ADC->ADC_LCDR[5];
       Vs_boost = ADC->ADC_LCDR[4];*/
-   mostrar_sinal();
-   //tratar_interrupcao();  
+   //mostrar_sinal();
 
+       /*Function where the input were received and insert in variable*/
+    TC_GetStatus(TC1, 0);
 }
 
 void mostrar_sinal()
@@ -130,32 +133,14 @@ void mostrar_sinal()
     b0 = Iy/100 + 48;
     b1 = (Iy/10)%10 +48;
     b2 = (Iy/1)%10 +48;
-    
-    while((UART_SR_TXRDY & UART->UART_SR)== 0);
-        UART->UART_THR = a0;
-    /*while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = 32;*/    
-    while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = a1;
-    /*while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = 32;*/
-    while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = a2;
-    
-    while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-       UART->UART_THR = 32;
-    while((UART_SR_TXRDY & UART->UART_SR)== 0);
-        UART->UART_THR = b0;
-    /*while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = 32; */   
-    while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = b1;
-    /*while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = 32;*/
-    while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = b2;
-    while((UART_SR_TXEMPTY & UART->UART_SR) == 0);
-        UART->UART_THR = 10;
+
+    volatile double reade[8] = {a0,a1,a2,32,b0,b1,b2,10};
+    for (int i =0; i<8; i++)
+    {
+      while((UART_SR_TXRDY & UART->UART_SR)== 0);
+        UART->UART_THR = reade[i];
+    }  
+        
 }
 
 void startTimer(Tc *tc, uint32_t channel, IRQn_Type irq, uint32_t frequency){
@@ -180,18 +165,18 @@ void startTimer(Tc *tc, uint32_t channel, IRQn_Type irq, uint32_t frequency){
 
 void tratar_interrupcao()
 {
-  while ((UART->UART_SR & UART_SR_RXRDY) == 0); /*wait for conversion by uart register*/
+  while ((UART_SR_RXBUFF && !UART_SR_RXRDY) == 1); /*wait for conversion by uart register*/
   key = UART->UART_RHR; /*receive serial message*/
   switch(key)
   {
-    case 49:
+    case 49: //1
     /*Receive signals from buck and boost converter*/ 
     leitura = 1; break;
     
-    case 50:
+    case 50: //2
     malha = 1; break; /*Call the function to work in open mash*/
     
-    case 51:
+    case 51: //3
     while(duty <= 50) /*generate ramp to point of operation in cpl*/
     {
      delay(100);
@@ -201,32 +186,37 @@ void tratar_interrupcao()
     cpl = 1;
     break; 
     
-    case 52:
+    case 52: //4
     malha = 2; control = 1;break; /*Call the function to execute chosen control strategy State feedback*/ 
     
-    case 53:
+    case 53: //5
     malha = 2; control = 2; break; /*Call the function to execute chosen control strategy State feedback Classic control law*/
     
-    case 54:
+    case 54: //6
     malha = 2; control = 3; break; /*Call the function to execute chosen control strategy State feedback Classic control law sliding mode control*/
     
-    case 55:  /*zero for all control flags*/
-    leitura = 0; malha = 0; control = 0; cpl = 0;PWM->PWM_CH_NUM[2].PWM_CDTY = 0;
+    case 55:  //7 /*zero for all control flags*/
+    leitura = 0; malha = 0; control = 0; cpl = 0;PWM->PWM_CH_NUM[2].PWM_CDTY = 100;
     volatile double u[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};
     volatile double e[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};
     break;
   }
 
   if (leitura == 1)
-  {}
-
-  if (malha == 1) /*Call the function to work in open mash*/
-  {open_loop();}
+  { mostrar_sinal();    }    
+    
+ if (malha == 1) /*Call the function to work in open mash*/
+  {open_loop();
+   mostrar_sinal();}
   if (malha == 2) /*Call the function to execute chosen control strategy*/
-  {closed_loop();
-  mostrar_sinal();}
-        
-}
+  {closed_loop(); 
+   mostrar_sinal();}
+  
+    
+
+  }
+
+
 
 void open_loop() /*open mash */
 {
@@ -261,7 +251,7 @@ void open_loop() /*open mash */
     /*CPL control law*/
   }
 
-  control_dut = u[0]*200.0;
+  control_dut = 100.0 - u[0]*100.0;
   PWM->PWM_CH_NUM[2].PWM_CDTY = control_dut;
 
 }
@@ -293,7 +283,7 @@ u[0] = u[1]+x1*e[0]+x2*e[1];
   {
     u[0] = 0.0;
   }
-
+  
     u[1] = u[0];
     e[1] = e[0];
     
