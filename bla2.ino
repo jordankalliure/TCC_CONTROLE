@@ -1,3 +1,7 @@
+///////////////////////////////////////////////////
+///       Trabalho de Conclusão de Curso        ///
+///author : Jordan Kalliure Souza Carvalho v2.0///  
+///////////////////////////////////////////////////
 static double x1,x2;
 volatile double Vc_buck= 0.0000, IL_buck= 0.0000, Ic_buck= 0.0000; //values from buck converter
 volatile double Vc_boost = 0.0000, Ic_boost= 0.0000, Ir_boost= 0.0000, Vs_boost= 0.0000;//values from boost converter
