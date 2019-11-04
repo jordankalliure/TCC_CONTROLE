@@ -1,5 +1,10 @@
-/*Autor: Jordan Kalliure/ Isaías Bessa
-v3.0*/
+/*  Trabalho de Conclusão de Curso
+  
+  Código para os controladores v3.0
+    Autor: Jordan Kalliure
+    Co-Autor: Isaías Bessa*/
+
+
 static double x1,x2;
 static double Pb = 9; //Potência de base para a CPL
 volatile double Vc_buck= 0.0000, IL_buck= 0.0000, Ic_buck= 0.0000; //values from buck converter
