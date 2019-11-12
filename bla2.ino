@@ -5,23 +5,23 @@
     Co-Autor: Isaías Bessa*/
 
 
-static double x1,x2;
-static double Pb = 9; //Potência de base para a CPL
-volatile double Vc_buck= 0.0000, IL_buck= 0.0000, Ic_buck= 0.0000; //values from buck converter
-volatile double Vc_cpl = 0.0000, IL_cpl= 0.0000; //values from buck cpl
+static double Pb = 7.2; //Potência de base para a CPL
+volatile double Vc_buck= 0.0000, IL_buck= 0.0000,IL_buck1= 0.0000, Ic_buck= 0.0000; //values from buck converter
+volatile double Vc_cpl = 0.0000, IL_cpl= 0.0000, IL_cpl1= 0.0000; //values from buck cpl
 volatile double Vc_boost = 0.0000, Ic_boost= 0.0000, Ir_boost= 0.0000, Vs_boost= 0.0000;//values from boost converter
 volatile double u[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00}; //error and control signal
 volatile double uCpl[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00}; //sinal de controle da CPL
 volatile double e[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00}; //error and control signal
 volatile double eCpl[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00}; //error da CPL
 volatile double r1[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00}; //referência para realimentação de estados;
-volatile double vref = 3.0;
-volatile double Pref = 0.4; //potência de referência  da CPL em p.u.
-volatile double reade[8] = {0,0,0,32,0,0,0,10};
+volatile double vref = 6.0;
+volatile double Pref = 50; //potência de referência  da CPL em p.u.
+volatile double reade[12] = {0,0,0,32,0,0,0,32,0,0,0,10};
+volatile double reade2[8] = {0,0,0,32,0,0,0,10};
 volatile double Rcarga = 4.0, control_dut1 = 0.00, control_dut2 = 0.00;
-volatile int Vbuck1 = 0,Ibuck1 = 0,Pbuck2 = 0,Ibuck2 = 0,vr = 0; //duty cycle variable
+volatile int Vbuck1 = 0,Ibuck1 = 0,Pbuck2 = 0,Ibuck2 = 0,vr = 0,ubuck1 = 0, Pr = 0; //duty cycle variable
 volatile int leitura = 0, malha = 0, control = 0, cpl = 0; //Control flags 
-volatile int t = 0,key = 0, deltaT = 0, duty = 0, a0 = 0,a1 = 0,a2 = 0,a3 = 0,a4 = 0,b0 = 0,b1 = 0,b2 = 0,b3 = 0,b4 = 0,c0 = 0,c1 = 0,c2 = 0,c3 = 0,c4 = 0,d0 = 0,d1 = 0,d2 = 0,d3 = 0,d4 = 0,e0 = 0,e1 = 0,e2 = 0,e3 = 0,e4 = 0; //
+volatile int tt = 0,ttt = 0,key = 0, deltaT = 0, duty = 0, a0 = 0,a1 = 0,a2 = 0,a3 = 0,a4 = 0,b0 = 0,b1 = 0,b2 = 0,b3 = 0,b4 = 0,c0 = 0,c1 = 0,c2 = 0,c3 = 0,c4 = 0,d0 = 0,d1 = 0,d2 = 0,d3 = 0,d4 = 0,e0 = 0,e1 = 0,e2 = 0,e3 = 0,e4 = 0, vp = 0, vt = 0, g = 0; //
 //static char  space = 32; 
 
 void setup() {
@@ -118,61 +118,85 @@ void pwm_start()
   /*PWM NEED TO START TO CPL IN RAMP INPUT*/
 }
 void TC3_Handler(){
-
-    tratar_interrupcao(); 
-    
+  
     /*BUCK converter receive signal by analog input to buck*/
-    while((ADC->ADC_ISR & ADC_CHER_CH11) == 0); //A9
-    Vc_buck = ADC->ADC_CDR[11]*(5.0*3.3/4095.0); 
-    while((ADC->ADC_ISR & ADC_CHER_CH12) == 0); //A10
-    IL_buck = ADC->ADC_CDR[12]*(3.3/4095.0);
-    IL_buck = (IL_buck-2.45)/0.185;
+//    while((ADC->ADC_ISR & ADC_CHER_CH11) == 0); //A9
+//    Vc_buck = ADC->ADC_CDR[11]*(5.0*3.3/4095.0); 
+
+//    while((ADC->ADC_ISR & ADC_CHER_CH12) == 0); //A10
+//    IL_buck1 = ADC->ADC_CDR[12]*(3.3/4095.0);
+//    IL_buck = (IL_buck1-2.45)/0.185;
 
     /*  */
     while((ADC->ADC_ISR & ADC_CHER_CH13) == 0); //A11
     Vc_cpl = ADC->ADC_CDR[13]*(5.0*3.3/4095.0);
-    while((ADC->ADC_ISR & ADC_CHER_CH7) == 0); //A0
-    IL_cpl = ADC->ADC_CDR[7]*(3.3/4095.0);
-    IL_cpl = (IL_cpl-2.45)/0.185;
+    
+//    while((ADC->ADC_ISR & ADC_CHER_CH7) == 0); //A0
+//    IL_cpl1 = ADC->ADC_CDR[7]*(3.3/4095.0);
+//    IL_cpl = (IL_cpl1-2.45)/0.185;
     //Vc_buck = ADC->ADC_CDR[13]*(5.0*3.3/4095.0);
+
+    tratar_interrupcao(); 
     
     TC_GetStatus(TC1, 0);
 }
 
 void mostrar_sinal()
 { //voltar
-    Vbuck1 = Vc_buck*100;
+
+/*    Pbuck2 = ((Vc_buck*Vc_buck)/(Pb*4))*100;
+    a0 = Pbuck2/100 + 48;
+    a1 = (Pbuck2/10)%10 +48;
+    a2 = (Pbuck2/1)%10 +48;
+*/
+
+ /*   Vbuck1 = Vc_buck*100;
     a0 = Vbuck1/100 + 48;
     a1 = (Vbuck1/10)%10 +48;
     a2 = (Vbuck1/1)%10 +48;
 
-    Ibuck1 = IL_buck*100;
+    Ibuck1 =IL_buck*100; //((Vc_cpl*Vc_cpl)/(Pb*5))*100;
     b0 = Ibuck1/100 + 48;
     b1 = (Ibuck1/10)%10 +48;
     b2 = (Ibuck1/1)%10 +48;
 
-    Pbuck2 = ((Vc_cpl*Vc_cpl)/(Pb*4))*100;
-    c0 = Pbuck2/100 + 48;
-    c1 = (Pbuck2/10)%10 +48;
-    c2 = (Pbuck2/1)%10 +48;
+    ubuck1 = u[0]*100;
+    c0 = ubuck1/100 + 48;
+    c1 = (ubuck1/10)%10 +48;
+    c2 = (ubuck1/1)%10 +48;
+    */
+    Pbuck2 = (100.0*(Vc_cpl*Vc_cpl)/(Pb*5.0))*100;
+    d0 = Pbuck2/100 + 48;
+    d1 = (Pbuck2/10)%10 +48;
+    d2 = (Pbuck2/1)%10 +48;
 
-    Ibuck2 = IL_cpl*100;
-    d0 = Ibuck2/100 + 48;
-    d1 = (Ibuck2/10)%10 +48;
-    d2 = (Ibuck2/1)%10 +48;
+    //Ibuck2 = IL_cpl*100;
+    //d0 = Ibuck2/100 + 48;
+    //d1 = (Ibuck2/10)%10 +48;
+    //d2 = (Ibuck2/1)%10 +48;
 
-    vr = vref*100;
-    e0 = vr/100 + 48;
-    e1 = (vr/10)%10+48;
-    e2 = (vr/1)%10+48;
+    Pr = Pref*100;
+    e0 = Pr/100 + 48;
+    e1 = (Pr/10)%10+48;
+    e2 = (Pr/1)%10+48;
 
-    volatile double reade[16] = {a0,a1,a2,32,b0,b1,b2,32,c0,c1,c2,32,d0,d1,d2,10};
+ //   volatile double reade[12] = {a0,a1,a2,32,b0,b1,b2,32,c0,c1,c2,32};//,d0,d1,d2,10};
+    volatile double reade2[8] = {d0,d1,d2,32,e0,e1,e2,10};
     /*volatile double reade[8] = {a0,a1,a2,32,e0,e1,e2,10};*/
-    for (int i =0; i<16; i++)
+
+ 
+/*    for (int i = 0; i<12; i++)
     {
-      while((UART_SR_TXRDY & UART->UART_SR)== 0);
+      while(((UART_SR_TXRDY) & (UART->UART_SR)) == 0);
         UART->UART_THR = reade[i];
     }  
+*/
+    for (int i = 0; i<8; i++)
+    {
+      while(((UART_SR_TXRDY) & (UART->UART_SR)) == 0);
+        UART->UART_THR = reade2[i];
+    }  
+
         
 }
 
@@ -208,9 +232,9 @@ void habilita_carga()
   PIOC->PIO_OER = PIO_OER_P3;
   PIOC->PIO_SODR = PIO_SODR_P3;
 }
-
+/*
 void varia_carga()
-{ /*FUNÇÃO PARA VARIAR A CARGA A CADA 1 SEGUNDO*/
+{ //FUNÇÃO PARA VARIAR A CARGA A CADA 1 SEGUNDO
   switch(t)
   {
   case 5000: //carga 2ohms
@@ -241,7 +265,7 @@ void varia_carga()
   PIOC->PIO_SODR = PIO_SODR_P3;
   break;
   
-  case 20000: //carga 4,8ohms = 5ohms
+  case 20000: //carga 4,8ohms = 5ohms ata, até parece
   PIOC->PIO_CODR = PIO_CODR_P18;//chave S3  
   PIOC->PIO_SODR = PIO_SODR_P14;
   PIOC->PIO_SODR = PIO_SODR_P16;
@@ -259,7 +283,7 @@ void varia_carga()
   PIOC->PIO_SODR = PIO_SODR_P3;
   break;
 }
-}
+}*/
 
 void startTimer(Tc *tc, uint32_t channel, IRQn_Type irq, uint32_t frequency){
     /*this function is used to create a interruption using internal clock*/
@@ -281,25 +305,6 @@ void startTimer(Tc *tc, uint32_t channel, IRQn_Type irq, uint32_t frequency){
     NVIC_EnableIRQ(irq);
 }
 
-void vrefer()
-{ /*VARIAÇÃO DE PONTO DE REFRENCIA*/
-  switch (t)
-  {
-  case 2500:
-  vref = vref + 1;break;
-  case 5000:
-  vref = vref + 1;break;
-  case 7500:
-  vref = vref - 2;break;
-  case 10000:
-  vref = vref - 1;break;
-  case 12500:
-  vref = vref - 1;break;
-  case 15000:
-  vref = vref + 2;break;
-  }
-}
-
 void tratar_interrupcao()
 {
   while ((UART_SR_RXBUFF && !UART_SR_RXRDY) == 1); /*wait for conversion by uart register*/
@@ -315,7 +320,7 @@ void tratar_interrupcao()
     
     case 51: //3
     //while(duty <= 50) /*CPL acionada em MA*/
-    cpl = 1;
+    g = 1;
     break; 
     
     case 52: //4
@@ -323,7 +328,7 @@ void tratar_interrupcao()
          
     case 53: //5
     malha = 2; control = 4; break;
-
+    //t = t+1;vrefer();break;
     case 54: //6
     malha = 2; control = 5; break;
 
@@ -334,13 +339,18 @@ void tratar_interrupcao()
     malha = 2; control = 7; break;
 
     case 57: //9
-    malha = 2; cpl = 1; break;
+    cpl = 1; break;
 
     case 82://R
-    t = t+1;varia_carga();break;
-    
+    vt = 1; break;       // flag to start the cpl power variation 
+    //t = t+1; prefer();break;
+
+     case 83://S
+    vp = 1; break;       // flag to start the cpl power variation 
+    //t = t+1; prefer();break;
+       
     case 115:  //s stop /*zero for all control flags*/
-    leitura = 0; malha = 0; control = 0; cpl = 0;PWM->PWM_CH_NUM[2].PWM_CDTY = 100;PWM->PWM_CH_NUM[3].PWM_CDTY = 100;
+    leitura = 0; malha = 0; control = 0; cpl = 0; vt = 0; vp =0; PWM->PWM_CH_NUM[2].PWM_CDTY = 100;PWM->PWM_CH_NUM[3].PWM_CDTY = 100; tt = 0; ttt = 0;
     volatile double u[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};
     volatile double e[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};
     volatile double uCpl[20] = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};
@@ -353,18 +363,23 @@ void tratar_interrupcao()
   { mostrar_sinal();}    
     
   if (malha == 1) /*Call the function to work in open mash*/
-  {open_loop();
-   mostrar_sinal();}
-  if (malha == 2) /*Call the function to execute chosen control strategy*/
-  {closed_loop(); 
-   mostrar_sinal();}
+  { open_loop();
+    mostrar_sinal();}
+  if ((malha == 2)) /*Call the function to execute chosen control strategy*/
+  { closed_loop();
+    mostrar_sinal();}
+   
   }
 
+  
 
-
-void open_loop() /*open mash */
+void open_loop() /*open loop */
 {
-  PWM->PWM_CH_NUM[2].PWM_CDTY = 50;                             // Channel 2: Set the PWM duty cycle to x%= (CDTY/ CPRD)  * 100 % ;
+ // PWM->PWM_CH_NUM[2].PWM_CDTY = 100 - 50;                             // Channel 2: Set the PWM duty cycle to x%= (CDTY/ CPRD)  * 100 % ;
+  PWM->PWM_CH_NUM[3].PWM_CDTY = 100 - 50;
+
+if (g == 1) {PWM->PWM_CH_NUM[2].PWM_CDTY = 100 - 50; PWM->PWM_CH_NUM[3].PWM_CDTY = 100 - 50;g =0;}
+
 }
   /*control_dut = u[0]*200;
   PWM->PWM_CH_NUM[2].PWM_CDTY = control_dut;
@@ -372,57 +387,24 @@ void open_loop() /*open mash */
 
  void closed_loop() /*closed mash*/
  {
-  e[0] = vref - Vc_buck;
-  eCpl[0] = Pref - (Vc_buck*Vc_buck)/(4.0*Pb);
-  
-  if(control == 3)
-  {
-   deltaT = 1;
-   /*sliding mode control*/
-   sm_control(); 
-  }
-  else if(control == 1)
-  {
-    /*Classic control law*/
-    pi_control();
-  }
-  else if(control == 2)
-  {
-    /*State feedback*/
+
+  if(vp == 1){ ttt = ttt+1;}
+      if((ttt> 0) & (ttt<2500))      {Pref = 60;}
+      if((ttt>= 2500) & (ttt<5000))  {Pref = 70;}      
+      if((ttt>= 5000) & (ttt<7500))  {Pref = 60;}      
+      if((ttt>= 7500) & (ttt<10000)) {Pref = 50;}           
+      if((ttt>= 10000) & (ttt<12500)){Pref = 40;}
+      if((ttt>= 12500) & (ttt<15000)){Pref = 30; volatile int vp = 0;}                       
     
-  }
-  else if (control == 4)
-  {
-    diophantine_control_m();
-  }
-  else if (control == 5)
-  {
-    lgr_control_m();
-  }
-  else if (control == 6)
-  {
-    lqr_control();
-  }
-  else if (control == 7)
-  {
-    lya_control();
-  }
-  else if (control == 8)
-  {
-    cplBuck_control_m();
-  }
-  else if (cpl == 1)
-  {
-    /*CPL control law*/
-    cplBuck_control_m();
-  }
+    eCpl[0] = Pref - 100*(Vc_cpl*Vc_cpl)/(5.0*Pb);  
 
-  control_dut1 = 100.0 - u[0]*100.0;
-  PWM->PWM_CH_NUM[2].PWM_CDTY = control_dut1;
-
-  control_dut2 = 100.0 - uCpl[0]*100.0;
-  PWM->PWM_CH_NUM[3].PWM_CDTY = control_dut2;
+     cplBuck_control_m();
+     
+ 
+     control_dut2 = 100.0 - uCpl[0]*100.0;
+     PWM->PWM_CH_NUM[3].PWM_CDTY = control_dut2;   
 }
+
 
 void sm_control()
 {
@@ -461,8 +443,7 @@ u[0] = u[1]+x1*e[0]+x2*e[1];
   }
   
     u[1] = u[0];
-    e[1] = e[0];
-    
+    e[1] = e[0];    
 }
 
 void diophantine_control_t() //Controle por equação diofantina utilizando aproximação tustin p/ o feeder
@@ -556,9 +537,9 @@ e[2]=e[0];
 void lqr_control() //Controle por LQR utilizando realimentação de estados;
 {
 
-static double k1 = 0.2161;//0.1735;//0.2522;
-static double k2 = 0.065;//0.034;//0.7317;
-static double c = 0.012;//0.025;//0.12;
+static double k1 = 0.021;//0.2161;//0.1735;//0.2522;
+static double k2 = 0.002;//0.065;//0.034;//0.7317;
+static double c = 0.01;//0.048;//0.012;//0.025;//0.12;
 
  r1[0] = r1[2] + c*e[2];
  u[0] = r1[0] - k1*IL_buck - k2*Vc_buck;
@@ -580,7 +561,7 @@ void lya_control() //Controle por Lyapunov utilizando realimentação de estados
 
 static double k1 = 0.0455; //0.0427;
 static double k2 = 0.0592;//0.0602;
-static double c = 0.012;//0.015;
+static double c = 0.012;//0.012;//0.015;
 
  r1[0] = r1[2] + c*e[2];
  u[0] = r1[0] - k1*IL_buck - k2*Vc_buck;
@@ -597,37 +578,14 @@ r1[2]=r1[0];
 e[2]=e[0];
 }
 
-
-void cplBuck_control_t() //Controle por equação diofantina utilizando aproximação tustin p/ a CPL
-{
-static double a = 25.45;
-static double b = -50.68;
-static double c = 25.32;
-
-uCpl[0] = uCpl[2] + a*eCpl[0] + b*eCpl[1] + c*eCpl[2];
-
- if (uCpl[0]>1.0)
- {
-   uCpl[0] = 1.0;
- }
- else if (u[0]<0.0)
- {
-   uCpl[0] = 0.0;
- }
- 
-uCpl[2]=u[1];
-uCpl[1]=u[0];  
-eCpl[2]=eCpl[1];
-eCpl[1]=eCpl[0];
-}
-
 void cplBuck_control_m() //Controle por equação diofantina utilizando aproximação matched p/ a CPL
 {
-static double a = 12.71;
-static double b = -25.32;
-static double c = 12.64;
+static double aCpl = 15.51;
+static double bCpl = -30.84;
+static double cCpl = 15.66;
 
-uCpl[0] = uCpl[1] + (2.0*a+b)*eCpl[0] + (-a+c)*eCpl[1];
+
+uCpl[0] = uCpl[1] + (2.0*aCpl+bCpl)*eCpl[0] + (-aCpl+cCpl)*eCpl[1];
 
  if (uCpl[0]>1.0)
  {
@@ -640,4 +598,22 @@ uCpl[0] = uCpl[1] + (2.0*a+b)*eCpl[0] + (-a+c)*eCpl[1];
  
 uCpl[1]=uCpl[0];  
 eCpl[1]=eCpl[0];
+
+/*static double a = 15.51;//22.51;//12.71;
+static double b = -30.84;//-41.84;//-25.32;
+static double c = 15.66;//19.66;//12.64;
+
+u[0] = u[1] + (2.0*a+b)*e[0] + (-a+c)*e[1];
+
+ if (u[0]>1.0)
+ {
+   u[0] = 1.0;
+ }
+ else if (u[0]<0.0)
+ {
+   u[0] = 0.0;
+ }
+ 
+u[1]=u[0];  
+e[1]=e[0];*/
 }
